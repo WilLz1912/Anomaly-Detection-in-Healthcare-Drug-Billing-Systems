@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDSCAN</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #1a1a2e;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: #0f0f1a;
+    border-bottom: 1px solid #333;
+}
+.logo-text {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00ffcc;
+    letter-spacing: 1px;
+}
+.status {
+    margin-left: auto;
+    font-size: 12px;
+    color: #00ffcc;
+}
+.status::before {
+    content: '● ';
+    animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+nav {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: #0f0f1a;
+    border-bottom: 1px solid #333;
+}
+.step {
+    background: #333;
+    color: #aaa;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+.step.active {
+    background: #00ffcc;
+    color: #000;
+    font-weight: bold;
+}
+
+main { padding: 24px 20px; max-width: 900px; margin: 0 auto; }
+
+.section { display: none; }
+.section.active { display: block; }
+
+h2 { color: #00ffcc; margin-bottom: 14px; font-size: 18px; }
+
+/* Upload */
+.upload-zone {
+    border: 1.5px dashed #00ffcc55;
+    border-radius: 10px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    margin-bottom: 14px;
+}
+.upload-zone:hover, .upload-zone.drag {
+    background: rgba(0,255,204,.05);
+    border-color: #00ffcc;
+}
+.upload-zone p { color: #aaa; margin-top: 8px; font-size: 13px; }
+#preview img {
+    display: block;
+    max-width: 100%;
+    max-height: 280px;
+    margin: 12px auto;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+/* Buttons */
+.btn-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+.btn {
+    padding: 9px 22px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+    background: #00ffcc;
+    color: #000;
+    transition: opacity .15s;
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.secondary { background: #333; color: #00ffcc; }
+
+/* Loading */
+.loading {
+    text-align: center;
+    padding: 24px;
+    color: #00ffcc;
+    display: none;
+}
+.spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid #333;
+    border-top-color: #00ffcc;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Invoice info bar */
+.inv-bar {
+    background: #0f0f1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.inv-bar strong { font-size: 15px; color: #00ffcc; }
+.inv-bar span   { font-size: 12px; color: #aaa; }
+
+.mismatch {
+    background: rgba(255,68,68,.1);
+    border: 1px solid #f85149;
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: #f85149;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+/* Table */
+.tbl-wrap { overflow-x: auto; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #0f0f1a;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+thead th {
+    background: #111;
+    padding: 9px 12px;
+    text-align: left;
+    color: #aaa;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #333;
+    white-space: nowrap;
+}
+tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #222;
+    vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+/* Severity row colors */
+tbody tr.sev-0 td:first-child { border-left: 3px solid #3fb950; }
+tbody tr.sev-1 { background: rgba(210,153,34,.07); }
+tbody tr.sev-1 td:first-child { border-left: 3px solid #d29922; }
+tbody tr.sev-2 { background: rgba(240,136,62,.09); }
+tbody tr.sev-2 td:first-child { border-left: 3px solid #f0883e; }
+tbody tr.sev-3 { background: rgba(248,81,73,.09); }
+tbody tr.sev-3 td:first-child { border-left: 3px solid #f85149; }
+
+/* Badge severity */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.b0 { background: rgba(63,185,80,.12);  color: #3fb950; }
+.b1 { background: rgba(210,153,34,.12); color: #d29922; }
+.b2 { background: rgba(240,136,62,.12); color: #f0883e; }
+.b3 { background: rgba(248,81,73,.12);  color: #f85149; }
+
+/* Flag pills */
+.flag {
+    display: inline-block;
+    background: rgba(139,148,158,.1);
+    color: #8b949e;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 10px;
+    font-family: monospace;
+    margin: 1px 2px 1px 0;
+}
+.flag.f3 { background: rgba(248,81,73,.1);  color: #f85149; }
+.flag.f2 { background: rgba(240,136,62,.1); color: #f0883e; }
+.flag.f1 { background: rgba(210,153,34,.1); color: #d29922; }
+
+/* Summary */
+.summary-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+.sum-card {
+    flex: 1; min-width: 90px;
+    background: #0f0f1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+.sum-label { font-size: 11px; color: #aaa; text-transform: uppercase; }
+.sum-val   { font-size: 22px; font-weight: bold; margin-top: 2px; }
+.c-green  { color: #3fb950; }
+.c-yellow { color: #d29922; }
+.c-red    { color: #f85149; }
+
+/* Result banner */
+.banner {
+    margin-top: 14px;
+    padding: 11px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.banner.ok     { background: rgba(63,185,80,.1);  color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+.banner.danger { background: rgba(248,81,73,.1);  color: #f85149; border: 1px solid rgba(248,81,73,.3); }
+.banner.warn   { background: rgba(210,153,34,.1); color: #d29922; border: 1px solid rgba(210,153,34,.3); }
+
+/* Error box */
+.err-box {
+    background: rgba(248,81,73,.1);
+    border: 1px solid #f85149;
+    border-radius: 8px;
+    padding: 14px;
+    color: #f85149;
+    font-size: 13px;
+    margin: 12px 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo-text">MEDSCAN</span>
+  <span class="status">SYSTEM ONLINE</span>
+</header>
+
+<nav>
+  <div class="step active" id="step-0">1. Tải lên</div>
+  <div class="step"        id="step-1">2. Dữ liệu OCR</div>
+  <div class="step"        id="step-2">3. Phân tích</div>
+</nav>
+
+<main>
+
+  <!-- ── Bước 1: Upload ── -->
+  <div id="sec-0" class="section active">
+    <h2>Kéo thả ảnh hóa đơn vào đây</h2>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="image/jpeg,image/png" style="display:none">
+      <div style="font-size:32px;margin-bottom:10px">🖼</div>
+      <p>Cho ảnh vào</p>
+      <p style="margin-top:6px;color:#00ffcc">Click để chọn file</p>
+    </div>
+    <div id="preview"></div>
+    <div class="btn-row">
+      <button id="btn-start" class="btn" disabled>Bắt đầu quét OCR</button>
+    </div>
+  </div>
+
+  <!-- ── Bước 2: OCR ── -->
+  <div id="sec-1" class="section">
+    <h2>Dữ liệu từ OCR</h2>
+    <div class="loading" id="loading-1">
+      <span class="spinner"></span>Đang gửi ảnh và chạy OCR...
+    </div>
+    <div id="ocr-content"></div>
+    <div class="btn-row">
+      <button id="btn-analyze" class="btn" style="display:none">Chạy phát hiện bất thường</button>
+      <button id="btn-back-0"  class="btn secondary">← Quay lại</button>
+    </div>
+  </div>
+
+  <!-- ── Bước 3: Kết quả ── -->
+  <div id="sec-2" class="section">
+    <h2>Kết quả phân tích</h2>
+    <div class="loading" id="loading-2">
+      <span class="spinner"></span>Đang tổng hợp kết quả...
+    </div>
+    <div id="analyze-content"></div>
+    <div class="btn-row">
+      <button id="btn-reset" class="btn">Quét hóa đơn khác</button>
+      <button id="btn-back-1" class="btn secondary">← Quay lại</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API_URL = 'http://localhost:8000';
+
+let selectedFile = null;
+let apiResult    = null;
+
+// ── Elements ──
+const uploadZone  = document.getElementById('upload-zone');
+const fileInput   = document.getElementById('file-input');
+const preview     = document.getElementById('preview');
+const btnStart    = document.getElementById('btn-start');
+const btnAnalyze  = document.getElementById('btn-analyze');
+const btnReset    = document.getElementById('btn-reset');
+const btnBack0    = document.getElementById('btn-back-0');
+const btnBack1    = document.getElementById('btn-back-1');
+
+// ── Upload / drag-drop ──
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag');
+    handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+    if (!file) return;
+    selectedFile = file;
+    uploadZone.style.display = 'none';
+    preview.innerHTML = `
+        <img src="${URL.createObjectURL(file)}" alt="preview">
+        <div style="text-align:center;margin-top:8px">
+            <button class="btn secondary" onclick="changeImage()" style="font-size:12px;padding:6px 14px">
+                Chọn ảnh khác
+            </button>
+        </div>
+    `;
+    preview.style.display = 'block';
+    btnStart.disabled = false;
+}
+
+function changeImage() {
+    fileInput.value = '';
+    fileInput.click();
+}
+
+
+// ── Step navigation ──
+function goTo(step) {
+    [0, 1, 2].forEach(i => {
+        document.getElementById(`sec-${i}`).classList.toggle('active', i === step);
+        document.getElementById(`step-${i}`).classList.toggle('active', i === step);
+    });
+}
+
+// ── Bước 1→2: Gọi API /detect ──
+btnStart.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    goTo(1);
+
+    const loadEl = document.getElementById('loading-1');
+    const ocrEl  = document.getElementById('ocr-content');
+    loadEl.style.display = 'block';
+    ocrEl.innerHTML = '';
+    btnAnalyze.style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    try {
+        const res = await fetch(`${API_URL}/detect`, { method: 'POST', body: fd });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || `Lỗi server ${res.status}`);
+        }
+        apiResult = await res.json();
+        loadEl.style.display = 'none';
+        renderOCR(apiResult, ocrEl);
+        btnAnalyze.style.display = 'inline-block';
+
+    } catch (e) {
+        loadEl.style.display = 'none';
+        ocrEl.innerHTML = `<div class="err-box">❌ ${e.message}<br>
+            <small style="color:#aaa">Kiểm tra server đang chạy tại ${API_URL}</small></div>`;
+    }
+});
+
+// ── Bước 2→3: Render kết quả phân tích (đã có trong apiResult) ──
+btnAnalyze.addEventListener('click', () => {
+    if (!apiResult) return;
+    goTo(2);
+
+    const loadEl    = document.getElementById('loading-2');
+    const analyzeEl = document.getElementById('analyze-content');
+    loadEl.style.display = 'block';
+    analyzeEl.innerHTML  = '';
+
+    setTimeout(() => {
+        loadEl.style.display = 'none';
+        renderAnalysis(apiResult, analyzeEl);
+    }, 400);
+});
+
+// ── Reset ──
+btnReset.addEventListener('click', reset);
+btnBack0.addEventListener('click', () => goTo(0));
+btnBack1.addEventListener('click', () => goTo(1));
+
+function reset() {
+    selectedFile = null;
+    apiResult    = null;
+    preview.innerHTML  = '';
+    preview.style.display = 'none';
+    uploadZone.style.display = '';   // ← thêm dòng này
+    // ... phần còn lại giữ nguyên
+}
+
+// ── Render OCR (bước 2) ──
+function renderOCR(data, container) {
+    // Info bar
+    const bar = document.createElement('div');
+    bar.className = 'inv-bar';
+    bar.innerHTML = `
+        <strong>${data.ten_nha_thuoc || '—'}</strong>
+        <span>${data.so_hoa_don ? 'Số HD: ' + data.so_hoa_don : ''}</span>
+        <span>${data.ngay_lap   ? 'Ngày: '  + data.ngay_lap   : ''}</span>
+    `;
+    container.appendChild(bar);
+
+    // Bảng
+    const wrap = document.createElement('div');
+    wrap.className = 'tbl-wrap';
+    const items = data.items || [];
+    wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Tên thuốc</th>
+              <th>SL</th>
+              <th>ĐVT</th>
+              <th>Đơn giá</th>
+              <th>Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(it => `
+              <tr>
+                <td>${it.ten_thuoc   || '—'}</td>
+                <td>${it.so_luong    ?? '—'}</td>
+                <td>${it.don_vi_tinh || '—'}</td>
+                <td>${fmt(it.don_gia)}</td>
+                <td>${fmt(it.thanh_tien)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+    `;
+    container.appendChild(wrap);
+
+    // Tổng tiền
+    const tot = document.createElement('p');
+    tot.style.cssText = 'text-align:right;margin-top:10px;font-weight:bold;color:#00ffcc';
+    tot.innerText = `Tổng cộng: ${fmt(data.tong_tien)} đ`;
+    container.appendChild(tot);
+
+    if (data.total_mismatch) {
+        const mis = document.createElement('div');
+        mis.className = 'mismatch';
+        mis.innerText = `⚠ Tổng tính được: ${fmt(data.computed_total)} đ — KHÔNG KHỚP với tổng ghi trên hóa đơn`;
+        container.appendChild(mis);
+    }
+}
+
+// ── Render Analysis (bước 3) ──
+function renderAnalysis(data, container) {
+    const s = data.summary || {};
+
+    // Summary cards
+    const sumRow = document.createElement('div');
+    sumRow.className = 'summary-row';
+    sumRow.innerHTML = `
+        <div class="sum-card">
+            <div class="sum-label">Tổng dòng</div>
+            <div class="sum-val">${s.total ?? (data.items||[]).length}</div>
+        </div>
+        <div class="sum-card">
+            <div class="sum-label">Bình thường</div>
+            <div class="sum-val c-green">${s.ok ?? 0}</div>
+        </div>
+        <div class="sum-card">
+            <div class="sum-label">Cảnh báo</div>
+            <div class="sum-val c-yellow">${s.warning ?? 0}</div>
+        </div>
+        <div class="sum-card">
+            <div class="sum-label">Bất thường</div>
+            <div class="sum-val c-red">${s.anomaly ?? 0}</div>
+        </div>
+    `;
+    container.appendChild(sumRow);
+
+    // Mismatch banner
+    if (data.total_mismatch) {
+        const mis = document.createElement('div');
+        mis.className = 'mismatch';
+        mis.innerText = `⚠ TOTAL_MISMATCH — Tổng ghi: ${fmt(data.tong_tien)} đ  |  Tổng tính: ${fmt(data.computed_total)} đ`;
+        container.appendChild(mis);
+    }
+
+    // Bảng chi tiết
+    const wrap = document.createElement('div');
+    wrap.className = 'tbl-wrap';
+    const items = data.items || [];
+    wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Tên thuốc</th>
+              <th>SL</th>
+              <th>ĐVT</th>
+              <th>Đơn giá</th>
+              <th>Giá tham chiếu</th>
+              <th>Mức độ</th>
+              <th>Flags & Lý do</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(it => {
+                const sev = it.severity || 0;
+                const badge = ['✓ Bình thường','⚠ Cảnh báo','! Cần kiểm tra','✗ Nghiêm trọng'][sev] || '—';
+                const bc    = ['b0','b1','b2','b3'][sev] || 'b0';
+                const flags = (it.flags || []).map(f => {
+                    const fc = sevFlagClass(f);
+                    return `<span class="flag ${fc}">${f}</span>`;
+                }).join('');
+                const msgs = (it.messages || []).map(m =>
+                    `<div style="font-size:11px;color:#aaa;margin-top:2px">${m}</div>`
+                ).join('');
+                const mlNote = '';
+                return `
+                  <tr class="sev-${sev}">
+                    <td>${it.ten_thuoc || '—'}</td>
+                    <td>${it.so_luong ?? '—'}</td>
+                    <td>${it.don_vi_tinh || '—'}</td>
+                    <td>${fmt(it.don_gia)}</td>
+                    <td>${it.price_ref > 0 ? fmt(it.price_ref) : '—'}</td>
+                    <td><span class="badge ${bc}">${badge}</span>${mlNote}</td>
+                    <td>${flags}${msgs}</td>
+                  </tr>
+                `;
+            }).join('')}
+          </tbody>
+        </table>
+    `;
+    container.appendChild(wrap);
+
+    // Banner tổng hợp
+    const nAnom = s.anomaly || 0;
+    const nWarn = s.warning || 0;
+    const banner = document.createElement('div');
+
+    if (nAnom === 0 && nWarn === 0) {
+        banner.className = 'banner ok';
+        banner.innerText = '✓ Hóa đơn bình thường — không phát hiện bất thường';
+    } else if (data.invoice_severity === 3) {
+        banner.className = 'banner danger';
+        banner.innerText = `✗ Phát hiện ${nAnom} dòng bất thường nghiêm trọng — đề nghị kiểm tra ngay`;
+    } else {
+        banner.className = 'banner warn';
+        const parts = [];
+        if (nAnom) parts.push(`${nAnom} bất thường`);
+        if (nWarn) parts.push(`${nWarn} cảnh báo`);
+        banner.innerText = `⚠ Phát hiện ${parts.join(', ')} — cần kiểm tra lại`;
+    }
+    container.appendChild(banner);
+}
+
+// ── Helpers ──
+function fmt(n) {
+    if (n == null || n === 0) return '—';
+    return Number(n).toLocaleString('vi-VN');
+}
+
+function sevFlagClass(flag) {
+    const f3 = ['OVERPRICE_INJECTION','OVERPRICE_TABLET','OVERPRICE_SYRUP',
+                'SUSPICIOUS_LOW_PRICE','SUSPICIOUS_INJECTION_TRANSACTION',
+                'CONTROLLED_SUBSTANCE_VOLUME_RISK'];
+    const f2 = ['TOTAL_MISMATCH','HIGH_VALUE_TRANSACTION',
+                'UNUSUAL_HIGH_QTY_INJECTION','UNUSUAL_HIGH_QTY_SMALL_INJECTION',
+                'PACK_AND_PRICE_MANIPULATION'];
+    if (f3.includes(flag)) return 'f3';
+    if (f2.includes(flag)) return 'f2';
+    return 'f1';
+}
+</script>
+</body>
+</html>

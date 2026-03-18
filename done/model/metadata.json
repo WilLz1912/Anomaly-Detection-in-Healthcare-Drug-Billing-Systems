@@ -1,0 +1,23 @@
+{
+  "model_type": "IsolationForest",
+  "n_estimators": 400,
+  "contamination": 0.5,
+  "trained_on": "normal_rows_only",
+  "n_train_normal": 2518,
+  "features": [
+    "price_ratio",
+    "log_donGia",
+    "log_thanh",
+    "log_soLuong",
+    "soLuong",
+    "key_quality",
+    "is_injection",
+    "is_tablet",
+    "is_syrup",
+    "is_import",
+    "date_missing"
+  ],
+  "f1_anomaly_test": 0.8161879156643554,
+  "f1_normal_test": 0.32868217054263565,
+  "roc_auc": 0.6642416222128789
+}
